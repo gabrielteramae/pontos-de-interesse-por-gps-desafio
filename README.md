@@ -3,7 +3,6 @@
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?logo=python&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-blue)
 
 Solução para o desafio [`backend-br/desafios/points-of-interest`](https://github.com/backend-br/desafios/blob/master/points-of-interest/PROBLEM.md): cadastrar pontos de interesse (POIs) e listá-los por proximidade a partir de uma coordenada GPS de referência.
 
