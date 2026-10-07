@@ -40,8 +40,8 @@ app/
 ## Como rodar
 
 ```bash
-git clone <seu-repo>
-cd points-of-interest-api
+git clone https://github.com/gabrielteramae/pontos-de-interesse-por-gps-desafio.git
+cd pontos-de-interesse-por-gps-desafio
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8005
 ```
