@@ -1,40 +1,40 @@
-# Points of Interest API
+# Pontos de interesse — proximidade num plano, não em lat/lon
 
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
-![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-D71F00?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688?logo=fastapi&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0.35-D71F00)
 
-Solução para o desafio [`backend-br/desafios/points-of-interest`](https://github.com/backend-br/desafios/blob/master/points-of-interest/PROBLEM.md): cadastrar pontos de interesse (POIs) e listá-los por proximidade a partir de uma coordenada GPS de referência.
+Cadastra pontos com nome e coordenadas inteiras `x` e `y` (as duas `>= 0`) e lista os que estão dentro de uma distância máxima. A conta é euclidiana, em memória, sobre todas as linhas da tabela.
 
-## Como funciona
+## Por que distância euclidiana
 
-```
-POST /pois {"name": "Lanchonete", "x": 27, "y": 12} -> cadastra um POI
+| Escolha | Efeito |
+| --- | --- |
+| `sqrt((x1-x2)² + (y1-y2)²)` depois de um `SELECT` completo | Bate com o plano do modelo (`x`/`y` inteiros). Não usa índice espacial. |
+| Haversine ou PostGIS | Serve para latitude e longitude. Este modelo não tem lat/lon. |
 
-GET /pois -> lista todos os POIs cadastrados
-
-GET /pois/nearby?x=20&y=10&max_distance=10
-    -> calcula a distancia euclidiana de cada POI ate o ponto de referencia
-    -> retorna apenas os POIs com distancia <= max_distance
-```
-
-Distância euclidiana: `sqrt((x1-x2)² + (y1-y2)²)`. Verificado manualmente contra o exemplo do `PROBLEM.md` (ponto de referência `(20,10)`, `d-max=10`): dos 7 POIs de exemplo, exatamente os 4 esperados (Lanchonete, Joalheria, Pub, Supermercado) ficam dentro do raio, e os outros 3 (Posto, Floricultura, Churrascaria) ficam de fora — validado tanto matematicamente quanto rodando a API de ponta a ponta.
+`GET /pois/nearby` carrega todos os POIs e filtra em Python. Serve para a tabela pequena do exercício; não é busca geográfica.
 
 ## Stack
 
-- **FastAPI** para a API REST
-- **SQLAlchemy 2.0** + SQLite para persistência
-- Cálculo de distância isolado em `proximity.py`, puro e testável, sem dependência de framework
+- Python (sem versão pinada no repositório)
+- FastAPI 0.115.0 e Uvicorn 0.30.6
+- SQLAlchemy 2.0.35
+- SQLite em `sqlite:///./pois.db` (`DATABASE_URL` troca o banco)
+- `unittest` da biblioteca padrão
 
 ## Estrutura
 
 ```
 app/
-├── main.py         # endpoints POST /pois, GET /pois, GET /pois/nearby
-├── models.py         # entidade PointOfInterest
-├── schemas.py          # request/response (Pydantic)
-├── database.py           # conexao SQLAlchemy
-└── proximity.py             # calculo de distancia euclidiana e filtro
+├── main.py        # /pois e /pois/nearby
+├── proximity.py   # distância e filtro
+├── models.py
+├── schemas.py
+└── database.py
+tests/
+└── test_proximity.py
+requirements.txt
 ```
 
 ## Como rodar
@@ -42,33 +42,27 @@ app/
 ```bash
 git clone https://github.com/gabrielteramae/pontos-de-interesse-por-gps-desafio.git
 cd pontos-de-interesse-por-gps-desafio
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8005
+uvicorn app.main:app --reload
 ```
 
-## Exemplo
+## Endpoints
+
+| Método | Rota | Resposta |
+| --- | --- | --- |
+| POST | `/pois` | 201. Corpo: `name`, `x`, `y` |
+| GET | `/pois` | todos os pontos |
+| GET | `/pois/nearby` | query `x` (>= 0), `y` (>= 0), `max_distance` (> 0) |
+
+## Testes realizados
+
+`tests/test_proximity.py` não sobe a API. Confere o triângulo 3-4-5 (`euclidean_distance(0, 0, 3, 4) == 5`) e que o filtro com `max_distance` 5 mantém o ponto `(1, 1)` e descarta `(100, 100)`.
 
 ```bash
-curl -X POST http://localhost:8005/pois \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Lanchonete","x":27,"y":12}'
+python -m unittest tests.test_proximity
 ```
-
-```bash
-curl "http://localhost:8005/pois/nearby?x=20&y=10&max_distance=10"
-```
-```json
-[
-  {"id": 1, "name": "Lanchonete", "x": 27, "y": 12},
-  {"id": 3, "name": "Joalheria", "x": 15, "y": 12},
-  {"id": 5, "name": "Pub", "x": 12, "y": 8},
-  {"id": 6, "name": "Supermercado", "x": 23, "y": 6}
-]
-```
-
-## Deploy
-
-Pronto para subir no [Railway](https://railway.app): start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
 
 ---
 
